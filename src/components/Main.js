@@ -2,6 +2,7 @@ import React from 'react'
 import Form from 'react-jsonschema-form'
 
 import { defaultMarkdownText, defaultSchemaText } from '../constants/defaultText'
+import { SUPPORTED_TYPE } from '../constants/types'
 import 'normalize.css/normalize.css'
 import 'styles/main.scss'
 
@@ -19,7 +20,7 @@ class AppComponent extends React.Component {
   }
 
   componentDidMount() {
-    setTimeout(() => this.updateEditFrom(), 500)
+    this.updateEditFrom()
   }
 
   checkSchema() {
@@ -30,14 +31,13 @@ class AppComponent extends React.Component {
       schemaCanBeParsed = (typeof obj === 'object') && obj.length > 0
       if(schemaCanBeParsed) {
         for (let i = 0; i < obj.length; i++) {
-          if(obj[i].type !== 'boolean' && obj[i].type !== 'string') {
+          if(SUPPORTED_TYPE.every(d => obj[i].type !== d)) {
             schemaCanBeParsed = false
             break
           }
         }
       }
       this.setState({ schemaCanBeParsed })
-
     } catch (e) {
       schemaCanBeParsed = false
       this.setState({ schemaCanBeParsed: false })
@@ -116,7 +116,6 @@ class AppComponent extends React.Component {
         <textarea
           cols='50'
           defaultValue={defaultSchemaText}
-          name='textarea'
           onChange={() => this.checkSchema()}
           ref='schemaInput'
           rows='10'
@@ -126,7 +125,6 @@ class AppComponent extends React.Component {
         <textarea
           cols='50'
           defaultValue={markdownText}
-          name='textarea'
           ref='markdownInput'
           rows='10'
           onChange={() => this.updateMarkdown()}
@@ -139,7 +137,6 @@ class AppComponent extends React.Component {
         <h3>Result</h3>
         <textarea
           cols='50'
-          name='textarea'
           rows='10'
           ref='res'
           value={resultMarkdown}
