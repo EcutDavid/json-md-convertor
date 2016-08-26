@@ -39,7 +39,10 @@ const formData = {
 class AppComponent extends React.Component {
   constructor() {
     super()
-    this.state = { schemaCanBeParsed: true }
+    this.state = {
+      schemaCanBeParsed: true,
+      markdownText: defaultMarkdown
+    }
   }
 
   checkSchema() {
@@ -55,13 +58,21 @@ class AppComponent extends React.Component {
         }
       }
       this.setState({ schemaCanBeParsed })
+
+      if(schemaCanBeParsed) this.updateEditFrom()
     } catch (e) {
       this.setState({ schemaCanBeParsed: false })
     }
   }
 
+  updateMarkdown() {
+    const { markdownInput } = this.refs
+
+    this.setState({ markdownText: markdownInput.value })
+  }
+
   render() {
-    const { schemaCanBeParsed } = this.state
+    const { markdownText, schemaCanBeParsed } = this.state
 
     return (
       <div>
@@ -78,9 +89,11 @@ class AppComponent extends React.Component {
         <h3>Original Markdown</h3>
         <textarea
           cols='50'
-          defaultValue={defaultMarkdown}
+          defaultValue={markdownText}
           name='textarea'
+          ref='markdownInput'
           rows='10'
+          onChange={() => this.updateMarkdown()}
         />
         <h3>Edit From</h3>
         <Form schema={schema}
