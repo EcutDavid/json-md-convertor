@@ -24,25 +24,15 @@ const defaultSchema =
   "name": "featured", "target": "featured", "type": "boolean"
 }]`
 
-const schema = {
-  type: 'object',
-  properties: {
-    title: {type: 'string', title: 'Title', default: 'A new task'},
-  }
-}
-
-const formData = {
-  title: "First task",
-  done: true
-}
-
 class AppComponent extends React.Component {
   constructor() {
     super()
     this.state = {
       schemaCanBeParsed: true,
       markdownText: defaultMarkdown,
-      formSchema: { type: 'object', properties: {} }
+      formSchema: { type: 'object', properties: {} },
+      previousMarkdownState: '',
+      resultMarkdown: ''
     }
   }
 
@@ -74,7 +64,7 @@ class AppComponent extends React.Component {
 
   updateEditFrom() {
     const { schemaInput } = this.refs
-    const { markdownText, schemaCanBeParsed, formSchema } = this.state
+    let { markdownText, schemaCanBeParsed, formSchema } = this.state
 
     const schemaObj = JSON.parse(schemaInput.value)
     if (!schemaCanBeParsed) return
@@ -85,8 +75,12 @@ class AppComponent extends React.Component {
       const line = linePattern.exec(markdownText)
       const prePattern = new RegExp(schemaObj[i].target + ': ?')
       if(!line) continue
+      let defaultValue = line[0].replace(prePattern, '')
+      if(schemaObj[i].type === 'boolean') {
+        defaultValue = defaultValue === 'true'
+      }
       formSchema.properties[schemaObj[i].name] = {
-        default: line[0].replace(prePattern, ''),
+        default: defaultValue,
         title: schemaObj[i].name,
         type: schemaObj[i].type
       }
@@ -105,8 +99,28 @@ class AppComponent extends React.Component {
     }
   }
 
+  updateResult(formData) {
+    const { schemaInput } = this.refs
+    let { markdownText, schemaCanBeParsed } = this.state
+
+    const schemaObj = JSON.parse(schemaInput.value)
+    let newMarkdownText = markdownText
+    if (!schemaCanBeParsed) return
+    for (let i = 0; i < schemaObj.length; i++) {
+      const linePattern = new RegExp(schemaObj[i].target + ': ?[\\w ]*')
+      const line = linePattern.exec(markdownText)
+      const prePattern = new RegExp(schemaObj[i].target + ': ?')
+      if(!line) continue
+      let newValue = formData[schemaObj[i].name]
+      const preText = prePattern.exec(markdownText)[0]
+      newMarkdownText =
+        newMarkdownText.replace(linePattern, preText + newValue)
+    }
+    this.setState({ resultMarkdown: newMarkdownText, previousMarkdownState: newMarkdownText })
+  }
+
   render() {
-    const { formSchema, markdownText, schemaCanBeParsed } = this.state
+    const { formSchema, markdownText, resultMarkdown, schemaCanBeParsed } = this.state
 
     return (
       <div>
@@ -131,13 +145,10 @@ class AppComponent extends React.Component {
         />
         <h3>Edit From</h3>
         <Form schema={formSchema}
-          onChange={() => console.log("changed")}
-          onSubmit={res => console.log(res.formData)}
-          onError={() => console.log("errors")}
-          formData={formData}
+          onSubmit={res => this.updateResult(res.formData)}
         />
         <h3>Result</h3>
-        <textarea name='textarea' rows='10' cols='50' />
+        <textarea name='textarea' rows='10' cols='50' ref='res' value={resultMarkdown} />
       </div>
     )
   }
