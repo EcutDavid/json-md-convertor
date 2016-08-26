@@ -17,7 +17,7 @@ const defaultSchema =
 `[{
   "name": "ref", "target": "user", "type": "string"
 },{
-  "name": "name", "target": "name", "type": "string"
+  "name": "name", "target": "title", "type": "string"
 }, {
   "name": "position", "target": "position", "type": "string"
 }, {
@@ -41,15 +41,21 @@ class AppComponent extends React.Component {
     super()
     this.state = {
       schemaCanBeParsed: true,
-      markdownText: defaultMarkdown
+      markdownText: defaultMarkdown,
+      formSchema: { type: 'object', properties: {} }
     }
+  }
+
+  componentDidMount() {
+    setTimeout(() => this.updateEditFrom(), 500)
   }
 
   checkSchema() {
     const { schemaInput } = this.refs
+    let schemaCanBeParsed = true
     try {
       const obj = JSON.parse(schemaInput.value)
-      let schemaCanBeParsed = (typeof obj === 'object') && obj.length > 0
+      schemaCanBeParsed = (typeof obj === 'object') && obj.length > 0
       if(schemaCanBeParsed) {
         for (let i = 0; i < obj.length; i++) {
           if(obj[i].type !== 'boolean' && obj[i].type !== 'string') {
@@ -59,20 +65,48 @@ class AppComponent extends React.Component {
       }
       this.setState({ schemaCanBeParsed })
 
-      if(schemaCanBeParsed) this.updateEditFrom()
     } catch (e) {
+      schemaCanBeParsed = false
       this.setState({ schemaCanBeParsed: false })
     }
+    if(schemaCanBeParsed) this.updateEditFrom()
+  }
+
+  updateEditFrom() {
+    const { schemaInput } = this.refs
+    const { markdownText, schemaCanBeParsed, formSchema } = this.state
+
+    const schemaObj = JSON.parse(schemaInput.value)
+    if (!schemaCanBeParsed) return
+    formSchema.properties = {}
+    for (let i = 0; i < schemaObj.length; i++) {
+      if(!schemaObj[i].name) continue
+      const linePattern = new RegExp(schemaObj[i].target + ': ?[\\w ]*')
+      const line = linePattern.exec(markdownText)
+      const prePattern = new RegExp(schemaObj[i].target + ': ?')
+      if(!line) continue
+      formSchema.properties[schemaObj[i].name] = {
+        default: line[0].replace(prePattern, ''),
+        title: schemaObj[i].name,
+        type: schemaObj[i].type
+      }
+    }
+    this.setState({ formSchema })
   }
 
   updateMarkdown() {
+    const { schemaCanBeParsed } = this.state
     const { markdownInput } = this.refs
 
     this.setState({ markdownText: markdownInput.value })
+
+    if (schemaCanBeParsed) {
+      setTimeout(() => this.updateEditFrom(), 20)
+    }
   }
 
   render() {
-    const { markdownText, schemaCanBeParsed } = this.state
+    const { formSchema, markdownText, schemaCanBeParsed } = this.state
 
     return (
       <div>
@@ -96,7 +130,7 @@ class AppComponent extends React.Component {
           onChange={() => this.updateMarkdown()}
         />
         <h3>Edit From</h3>
-        <Form schema={schema}
+        <Form schema={formSchema}
           onChange={() => console.log("changed")}
           onSubmit={res => console.log(res.formData)}
           onError={() => console.log("errors")}
